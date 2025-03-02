@@ -1,0 +1,284 @@
+import sqlite3
+from datetime import datetime
+
+# Database connection
+def get_db_connection():
+    conn = sqlite3.connect('inventory.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Initialize the database schema
+def initialize_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Product (
+            product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            price REAL NOT NULL,
+            stock_level INTEGER NOT NULL,
+            reorder_point INTEGER NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Supplier (
+            supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            contact TEXT NOT NULL,
+            email TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS SupplierOrder (
+            order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            supplier_id INTEGER NOT NULL,
+            product_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL,
+            order_date TEXT NOT NULL,
+            delivery_date TEXT,
+            FOREIGN KEY (supplier_id) REFERENCES Supplier(supplier_id),
+            FOREIGN KEY (product_id) REFERENCES Product(product_id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Product Class
+class Product:
+    def __init__(self, name, description, price, stock_level, reorder_point):
+        self.name = name
+        self.description = description
+        self.price = price
+        self.stock_level = stock_level
+        self.reorder_point = reorder_point
+
+    def save(self):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO Product (name, description, price, stock_level, reorder_point)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (self.name, self.description, self.price, self.stock_level, self.reorder_point))
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def get_all():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM Product')
+        products = cursor.fetchall()
+        conn.close()
+        return products
+
+    @staticmethod
+    def update_stock(product_id, new_stock):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE Product SET stock_level = ? WHERE product_id = ?', (new_stock, product_id))
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def delete(product_id):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM Product WHERE product_id = ?', (product_id,))
+        conn.commit()
+        conn.close()
+
+# Supplier Class
+class Supplier:
+    def __init__(self, name, contact, email):
+        self.name = name
+        self.contact = contact
+        self.email = email
+
+    def save(self):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO Supplier (name, contact, email)
+            VALUES (?, ?, ?)
+        ''', (self.name, self.contact, self.email))
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def get_all():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM Supplier')
+        suppliers = cursor.fetchall()
+        conn.close()
+        return suppliers
+
+# Inventory Management
+class Inventory:
+    @staticmethod
+    def add_product():
+        name = input("Enter product name: ")
+        description = input("Enter product description: ")
+        price = float(input("Enter product price: "))
+        stock_level = int(input("Enter stock level: "))
+        reorder_point = int(input("Enter reorder point: "))
+        product = Product(name, description, price, stock_level, reorder_point)
+        product.save()
+        print("Product added successfully!")
+
+    @staticmethod
+    def update_product_stock():
+        product_id = int(input("Enter product ID to update stock: "))
+        new_stock = int(input("Enter new stock level: "))
+        Product.update_stock(product_id, new_stock)
+        print("Stock updated successfully!")
+
+    @staticmethod
+    def delete_product():
+        product_id = int(input("Enter product ID to delete: "))
+        Product.delete(product_id)
+        print("Product deleted successfully!")
+
+    @staticmethod
+    def view_inventory():
+        products = Product.get_all()
+        if not products:
+            print("No products found.")
+        else:
+            print("\nInventory:")
+            for product in products:
+                print(f"ID: {product['product_id']}, Name: {product['name']}, Stock: {product['stock_level']}, Reorder Point: {product['reorder_point']}")
+
+    @staticmethod
+    def check_reorder_points():
+        products = Product.get_all()
+        low_stock_products = [p for p in products if p['stock_level'] <= p['reorder_point']]
+        if not low_stock_products:
+            print("No products below reorder point.")
+        else:
+            print("\nProducts below reorder point:")
+            for product in low_stock_products:
+                print(f"ID: {product['product_id']}, Name: {product['name']}, Stock: {product['stock_level']}")
+
+# Supplier Order Management
+class SupplierOrderManager:
+    @staticmethod
+    def place_order():
+        supplier_id = int(input("Enter supplier ID: "))
+        product_id = int(input("Enter product ID: "))
+        quantity = int(input("Enter quantity: "))
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        order_date = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            INSERT INTO SupplierOrder (supplier_id, product_id, quantity, order_date)
+            VALUES (?, ?, ?, ?)
+        ''', (supplier_id, product_id, quantity, order_date))
+        conn.commit()
+        conn.close()
+        print("Order placed successfully!")
+
+    @staticmethod
+    def update_delivery():
+        order_id = int(input("Enter order ID to update delivery: "))
+        delivery_date = input("Enter delivery date (YYYY-MM-DD): ")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE SupplierOrder SET delivery_date = ? WHERE order_id = ?', (delivery_date, order_id))
+        conn.commit()
+        conn.close()
+        print("Delivery date updated successfully!")
+
+    @staticmethod
+    def view_orders():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM SupplierOrder')
+        orders = cursor.fetchall()
+        conn.close()
+        if not orders:
+            print("No orders found.")
+        else:
+            print("\nSupplier Orders:")
+            for order in orders:
+                print(f"Order ID: {order['order_id']}, Product ID: {order['product_id']}, Quantity: {order['quantity']}, Order Date: {order['order_date']}, Delivery Date: {order['delivery_date']}")
+
+# Reporting
+class Reports:
+    @staticmethod
+    def inventory_report():
+        products = Product.get_all()
+        if not products:
+            print("No products found.")
+        else:
+            print("\nInventory Report:")
+            for product in products:
+                print(f"ID: {product['product_id']}, Name: {product['name']}, Stock: {product['stock_level']}, Reorder Point: {product['reorder_point']}")
+
+    @staticmethod
+    def supplier_performance_report():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT Supplier.name, COUNT(SupplierOrder.order_id) AS total_orders
+            FROM Supplier
+            LEFT JOIN SupplierOrder ON Supplier.supplier_id = SupplierOrder.supplier_id
+            GROUP BY Supplier.supplier_id
+        ''')
+        performance = cursor.fetchall()
+        conn.close()
+        if not performance:
+            print("No supplier performance data found.")
+        else:
+            print("\nSupplier Performance Report:")
+            for supplier in performance:
+                print(f"Supplier: {supplier['name']}, Total Orders: {supplier['total_orders']}")
+
+# Main Menu
+def main_menu():
+    while True:
+        print("\n===== Inventory Management System =====")
+        print("1. Add Product")
+        print("2. Update Product Stock")
+        print("3. Delete Product")
+        print("4. View Inventory")
+        print("5. Check Reorder Points")
+        print("6. Place Supplier Order")
+        print("7. Update Delivery Date")
+        print("8. View Supplier Orders")
+        print("9. Generate Inventory Report")
+        print("10. Generate Supplier Performance Report")
+        print("0. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            Inventory.add_product()
+        elif choice == "2":
+            Inventory.update_product_stock()
+        elif choice == "3":
+            Inventory.delete_product()
+        elif choice == "4":
+            Inventory.view_inventory()
+        elif choice == "5":
+            Inventory.check_reorder_points()
+        elif choice == "6":
+            SupplierOrderManager.place_order()
+        elif choice == "7":
+            SupplierOrderManager.update_delivery()
+        elif choice == "8":
+            SupplierOrderManager.view_orders()
+        elif choice == "9":
+            Reports.inventory_report()
+        elif choice == "10":
+            Reports.supplier_performance_report()
+        elif choice == "0":
+            print("Exiting the system. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+# Run the program
+if __name__ == "__main__":
+    initialize_db()
+    main_menu()
