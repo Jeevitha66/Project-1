@@ -1,0 +1,251 @@
+import sqlite3
+import random
+
+# Database setup
+conn = sqlite3.connect('online_exam.db')
+cursor = conn.cursor()
+
+# Create tables
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL
+)
+''')
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS exams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT
+)
+''')
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exam_id INTEGER NOT NULL,
+    question_text TEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    option_c TEXT NOT NULL,
+    option_d TEXT NOT NULL,
+    correct_answer TEXT NOT NULL,
+    FOREIGN KEY (exam_id) REFERENCES exams (id)
+)
+''')
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    exam_id INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES users (id),
+    FOREIGN KEY (exam_id) REFERENCES exams (id)
+)
+''')
+
+conn.commit()
+
+# Classes
+class Exam:
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+
+    def save(self):
+        cursor.execute('INSERT INTO exams (name, description) VALUES (?, ?)', (self.name, self.description))
+        conn.commit()
+        return cursor.lastrowid
+
+class Question:
+    def __init__(self, exam_id, question_text, option_a, option_b, option_c, option_d, correct_answer):
+        self.exam_id = exam_id
+        self.question_text = question_text
+        self.option_a = option_a
+        self.option_b = option_b
+        self.option_c = option_c
+        self.option_d = option_d
+        self.correct_answer = correct_answer
+
+    def save(self):
+        cursor.execute('''
+        INSERT INTO questions (exam_id, question_text, option_a, option_b, option_c, option_d, correct_answer)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (self.exam_id, self.question_text, self.option_a, self.option_b, self.option_c, self.option_d, self.correct_answer))
+        conn.commit()
+
+class Result:
+    def __init__(self, student_id, exam_id, score):
+        self.student_id = student_id
+        self.exam_id = exam_id
+        self.score = score
+
+    def save(self):
+        cursor.execute('INSERT INTO results (student_id, exam_id, score) VALUES (?, ?, ?)', (self.student_id, self.exam_id, self.score))
+        conn.commit()
+
+# User Authentication
+def register_user():
+    username = input("Enter username: ").strip()
+    password = input("Enter password: ").strip()
+    role = input("Enter role (admin/student): ").strip().lower()
+
+    # Validate role
+    if role not in ["admin", "student"]:
+        print("Invalid role! Role must be either 'admin' or 'student'.")
+        return
+
+    # Check if username already exists
+    cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
+    if cursor.fetchone():
+        print("Username already exists! Please choose a different username.")
+        return
+
+    # Register the user
+    cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
+    conn.commit()
+    print(f"User '{username}' registered successfully as a {role}.")
+
+def authenticate_user():
+    username = input("Enter username: ").strip()
+    password = input("Enter password: ").strip()
+    cursor.execute('SELECT id, role FROM users WHERE username = ? AND password = ?', (username, password))
+    user = cursor.fetchone()
+    return user
+
+# Admin Functions
+def create_exam():
+    name = input("Enter exam name: ").strip()
+    description = input("Enter exam description: ").strip()
+    exam = Exam(name, description)
+    exam_id = exam.save()
+    print(f"Exam created with ID: {exam_id}")
+
+def add_question():
+    while True:
+        view_exams()
+        exam_id = input("Enter exam ID to add a question (or type 'exit' to return): ").strip()
+        if exam_id.lower() == 'exit':
+            break
+
+        try:
+            exam_id = int(exam_id)
+            question_text = input("Enter question text: ").strip()
+            option_a = input("Enter option A: ").strip()
+            option_b = input("Enter option B: ").strip()
+            option_c = input("Enter option C: ").strip()
+            option_d = input("Enter option D: ").strip()
+            correct_answer = input("Enter correct answer (A/B/C/D): ").strip().upper()
+            question = Question(exam_id, question_text, option_a, option_b, option_c, option_d, correct_answer)
+            question.save()
+            print("Question added successfully!")
+        except ValueError:
+            print("Invalid exam ID! Please enter a valid number.")
+
+def view_exams():
+    cursor.execute('SELECT * FROM exams')
+    exams = cursor.fetchall()
+    if exams:
+        print("\nExams:")
+        for exam in exams:
+            print(f"ID: {exam[0]}, Name: {exam[1]}, Description: {exam[2]}")
+    else:
+        print("No exams found.")
+
+# Student Functions
+def take_exam(student_id):
+    while True:
+        view_exams()
+        exam_id = input("Enter exam ID to take (or type 'exit' to return): ").strip()
+        if exam_id.lower() == 'exit':
+            break
+
+        try:
+            exam_id = int(exam_id)
+            cursor.execute('SELECT * FROM questions WHERE exam_id = ?', (exam_id,))
+            questions = cursor.fetchall()
+            if not questions:
+                print("No questions found for this exam.")
+                continue
+
+            selected_questions = random.sample(questions, min(5, len(questions)))  # Randomly select 5 questions
+            score = 0
+
+            for question in selected_questions:
+                print(f"\nQuestion: {question[2]}")
+                print(f"A: {question[3]}")
+                print(f"B: {question[4]}")
+                print(f"C: {question[5]}")
+                print(f"D: {question[6]}")
+                answer = input("Your answer (A/B/C/D): ").strip().upper()
+                if answer == question[7]:
+                    score += 1
+
+            result = Result(student_id, exam_id, score)
+            result.save()
+            print(f"\nYour score: {score}/{len(selected_questions)}")
+        except ValueError:
+            print("Invalid exam ID! Please enter a valid number.")
+
+# Main Program
+def main():
+    while True:
+        print("\n1. Register\n2. Login\n3. View Exams\n4. Exit")
+        choice = input("Choose an option: ").strip()
+
+        if choice == '1':
+            register_user()
+
+        elif choice == '2':
+            user = authenticate_user()
+            if user:
+                user_id, role = user
+                while True:
+                    if role == 'admin':
+                        print("\nAdmin Menu:")
+                        print("1. Create Exam\n2. Add Question\n3. View Exams\n4. Logout")
+                        admin_choice = input("Choose an option: ").strip()
+
+                        if admin_choice == '1':
+                            create_exam()
+                        elif admin_choice == '2':
+                            add_question()
+                        elif admin_choice == '3':
+                            view_exams()
+                        elif admin_choice == '4':
+                            break
+                        else:
+                            print("Invalid choice!")
+
+                    elif role == 'student':
+                        print("\nStudent Menu:")
+                        print("1. Take Exam\n2. View Exams\n3. Logout")
+                        student_choice = input("Choose an option: ").strip()
+
+                        if student_choice == '1':
+                            take_exam(user_id)
+                        elif student_choice == '2':
+                            view_exams()
+                        elif student_choice == '3':
+                            break
+                        else:
+                            print("Invalid choice!")
+            else:
+                print("Invalid username or password!")
+
+        elif choice == '3':
+            view_exams()
+
+        elif choice == '4':
+            print("Exiting the program. Goodbye!")
+            break
+
+        else:
+            print("Invalid choice!")
+
+if __name__ == "__main__":
+    main()
