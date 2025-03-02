@@ -1,0 +1,457 @@
+import json
+import os
+import hashlib
+
+# Database file
+DB_FILE = "bank_data.json"
+
+class Bank:
+    def __init__(self):
+        self.accounts = self.load_data()
+    
+    def load_data(self):
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r") as file:
+                return json.load(file)
+        return {}
+    
+    def save_data(self):
+        with open(DB_FILE, "w") as file:
+            json.dump(self.accounts, file, indent=4)
+    
+    def create_account(self, username, password):
+        if username in self.accounts:
+            print("Account already exists.")
+            return False
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        self.accounts[username] = {"password": hashed_password, "balance": 0.0, "transactions": []}
+        self.save_data()
+        print("Account created successfully!")
+        return True
+    
+    def authenticate(self, username, password):
+        if username in self.accounts:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            if self.accounts[username]["password"] == hashed_password:
+                return Account(username, self)
+        print("Invalid credentials.")
+        return None
+
+class Account:
+    def __init__(self, username, bank):
+        self.username = username
+        self.bank = bank
+    
+    def get_balance(self):
+        return self.bank.accounts[self.username]["balance"]
+    
+    def deposit(self, amount):
+        if amount > 0:
+            self.bank.accounts[self.username]["balance"] += amount
+            self.bank.accounts[self.username]["transactions"].append(f"Deposited: ${amount}")
+            self.bank.save_data()
+            print(f"Deposited ${amount} successfully.")
+        else:
+            print("Invalid deposit amount.")
+    
+    def withdraw(self, amount):
+        if 0 < amount <= self.get_balance():
+            self.bank.accounts[self.username]["balance"] -= amount
+            self.bank.accounts[self.username]["transactions"].append(f"Withdrawn: ${amount}")
+            self.bank.save_data()
+            print(f"Withdrawn ${amount} successfully.")
+        else:
+            print("Insufficient funds or invalid amount.")
+    
+    def view_transactions(self):
+        return self.bank.accounts[self.username]["transactions"]
+
+# Sample Interaction
+def main():
+    bank = Bank()
+    while True:
+        print("\nWelcome to the Banking System")
+        print("1. Create Account")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Choose an option: ")
+        
+        if choice == "1":
+            username = input("Enter a username: ")
+            password = input("Enter a password: ")
+            bank.create_account(username, password)
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            account = bank.authenticate(username, password)
+            if account:
+                while True:
+                    print("\n1. View Balance")
+                    print("2. Deposit Money")
+                    print("3. Withdraw Money")
+                    print("4. View Transactions")
+                    print("5. Logout")
+                    action = input("Choose an option: ")
+                    if action == "1":
+                        print("Balance:", account.get_balance())
+                    elif action == "2":
+                        amount = float(input("Enter deposit amount: "))
+                        account.deposit(amount)
+                    elif action == "3":
+                        amount = float(input("Enter withdrawal amount: "))
+                        account.withdraw(amount)
+                    elif action == "4":
+                        print("Transactions:", account.view_transactions())
+                    elif action == "5":
+                        break
+                    else:
+                        print("Invalid option.")
+        elif choice == "3":
+            break
+        else:
+            print("Invalid option, try again.")
+
+if __name__ == "__main__":
+    main()import json
+import os
+import hashlib
+
+# Database file
+DB_FILE = "bank_data.json"
+
+class Bank:
+    def __init__(self):
+        self.accounts = self.load_data()
+    
+    def load_data(self):
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r") as file:
+                return json.load(file)
+        return {}
+    
+    def save_data(self):
+        with open(DB_FILE, "w") as file:
+            json.dump(self.accounts, file, indent=4)
+    
+    def create_account(self, username, password):
+        if username in self.accounts:
+            print("Account already exists.")
+            return False
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        self.accounts[username] = {"password": hashed_password, "balance": 0.0, "transactions": []}
+        self.save_data()
+        print("Account created successfully!")
+        return True
+    
+    def authenticate(self, username, password):
+        if username in self.accounts:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            if self.accounts[username]["password"] == hashed_password:
+                return Account(username, self)
+        print("Invalid credentials.")
+        return None
+
+class Account:
+    def __init__(self, username, bank):
+        self.username = username
+        self.bank = bank
+    
+    def get_balance(self):
+        return self.bank.accounts[self.username]["balance"]
+    
+    def deposit(self, amount):
+        if amount > 0:
+            self.bank.accounts[self.username]["balance"] += amount
+            self.bank.accounts[self.username]["transactions"].append(f"Deposited: ${amount}")
+            self.bank.save_data()
+            print(f"Deposited ${amount} successfully.")
+        else:
+            print("Invalid deposit amount.")
+    
+    def withdraw(self, amount):
+        if 0 < amount <= self.get_balance():
+            self.bank.accounts[self.username]["balance"] -= amount
+            self.bank.accounts[self.username]["transactions"].append(f"Withdrawn: ${amount}")
+            self.bank.save_data()
+            print(f"Withdrawn ${amount} successfully.")
+        else:
+            print("Insufficient funds or invalid amount.")
+    
+    def view_transactions(self):
+        return self.bank.accounts[self.username]["transactions"]
+
+# Sample Interaction
+def main():
+    bank = Bank()
+    while True:
+        print("\nWelcome to the Banking System")
+        print("1. Create Account")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Choose an option: ")
+        
+        if choice == "1":
+            username = input("Enter a username: ")
+            password = input("Enter a password: ")
+            bank.create_account(username, password)
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            account = bank.authenticate(username, password)
+            if account:
+                while True:
+                    print("\n1. View Balance")
+                    print("2. Deposit Money")
+                    print("3. Withdraw Money")
+                    print("4. View Transactions")
+                    print("5. Logout")
+                    action = input("Choose an option: ")
+                    if action == "1":
+                        print("Balance:", account.get_balance())
+                    elif action == "2":
+                        amount = float(input("Enter deposit amount: "))
+                        account.deposit(amount)
+                    elif action == "3":
+                        amount = float(input("Enter withdrawal amount: "))
+                        account.withdraw(amount)
+                    elif action == "4":
+                        print("Transactions:", account.view_transactions())
+                    elif action == "5":
+                        break
+                    else:
+                        print("Invalid option.")
+        elif choice == "3":
+            break
+        else:
+            print("Invalid option, try again.")
+
+if __name__ == "__main__":
+    main()import json
+import os
+import hashlib
+
+# Database file
+DB_FILE = "bank_data.json"
+
+class Bank:
+    def __init__(self):
+        self.accounts = self.load_data()
+    
+    def load_data(self):
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r") as file:
+                return json.load(file)
+        return {}
+    
+    def save_data(self):
+        with open(DB_FILE, "w") as file:
+            json.dump(self.accounts, file, indent=4)
+    
+    def create_account(self, username, password):
+        if username in self.accounts:
+            print("Account already exists.")
+            return False
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        self.accounts[username] = {"password": hashed_password, "balance": 0.0, "transactions": []}
+        self.save_data()
+        print("Account created successfully!")
+        return True
+    
+    def authenticate(self, username, password):
+        if username in self.accounts:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            if self.accounts[username]["password"] == hashed_password:
+                return Account(username, self)
+        print("Invalid credentials.")
+        return None
+
+class Account:
+    def __init__(self, username, bank):
+        self.username = username
+        self.bank = bank
+    
+    def get_balance(self):
+        return self.bank.accounts[self.username]["balance"]
+    
+    def deposit(self, amount):
+        if amount > 0:
+            self.bank.accounts[self.username]["balance"] += amount
+            self.bank.accounts[self.username]["transactions"].append(f"Deposited: ${amount}")
+            self.bank.save_data()
+            print(f"Deposited ${amount} successfully.")
+        else:
+            print("Invalid deposit amount.")
+    
+    def withdraw(self, amount):
+        if 0 < amount <= self.get_balance():
+            self.bank.accounts[self.username]["balance"] -= amount
+            self.bank.accounts[self.username]["transactions"].append(f"Withdrawn: ${amount}")
+            self.bank.save_data()
+            print(f"Withdrawn ${amount} successfully.")
+        else:
+            print("Insufficient funds or invalid amount.")
+    
+    def view_transactions(self):
+        return self.bank.accounts[self.username]["transactions"]
+
+# Sample Interaction
+def main():
+    bank = Bank()
+    while True:
+        print("\nWelcome to the Banking System")
+        print("1. Create Account")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Choose an option: ")
+        
+        if choice == "1":
+            username = input("Enter a username: ")
+            password = input("Enter a password: ")
+            bank.create_account(username, password)
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            account = bank.authenticate(username, password)
+            if account:
+                while True:
+                    print("\n1. View Balance")
+                    print("2. Deposit Money")
+                    print("3. Withdraw Money")
+                    print("4. View Transactions")
+                    print("5. Logout")
+                    action = input("Choose an option: ")
+                    if action == "1":
+                        print("Balance:", account.get_balance())
+                    elif action == "2":
+                        amount = float(input("Enter deposit amount: "))
+                        account.deposit(amount)
+                    elif action == "3":
+                        amount = float(input("Enter withdrawal amount: "))
+                        account.withdraw(amount)
+                    elif action == "4":
+                        print("Transactions:", account.view_transactions())
+                    elif action == "5":
+                        break
+                    else:
+                        print("Invalid option.")
+        elif choice == "3":
+            break
+        else:
+            print("Invalid option, try again.")
+
+if __name__ == "__main__":
+    main()import json
+import os
+import hashlib
+
+# Database file
+DB_FILE = "bank_data.json"
+
+class Bank:
+    def __init__(self):
+        self.accounts = self.load_data()
+    
+    def load_data(self):
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r") as file:
+                return json.load(file)
+        return {}
+    
+    def save_data(self):
+        with open(DB_FILE, "w") as file:
+            json.dump(self.accounts, file, indent=4)
+    
+    def create_account(self, username, password):
+        if username in self.accounts:
+            print("Account already exists.")
+            return False
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        self.accounts[username] = {"password": hashed_password, "balance": 0.0, "transactions": []}
+        self.save_data()
+        print("Account created successfully!")
+        return True
+    
+    def authenticate(self, username, password):
+        if username in self.accounts:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            if self.accounts[username]["password"] == hashed_password:
+                return Account(username, self)
+        print("Invalid credentials.")
+        return None
+
+class Account:
+    def __init__(self, username, bank):
+        self.username = username
+        self.bank = bank
+    
+    def get_balance(self):
+        return self.bank.accounts[self.username]["balance"]
+    
+    def deposit(self, amount):
+        if amount > 0:
+            self.bank.accounts[self.username]["balance"] += amount
+            self.bank.accounts[self.username]["transactions"].append(f"Deposited: ${amount}")
+            self.bank.save_data()
+            print(f"Deposited ${amount} successfully.")
+        else:
+            print("Invalid deposit amount.")
+    
+    def withdraw(self, amount):
+        if 0 < amount <= self.get_balance():
+            self.bank.accounts[self.username]["balance"] -= amount
+            self.bank.accounts[self.username]["transactions"].append(f"Withdrawn: ${amount}")
+            self.bank.save_data()
+            print(f"Withdrawn ${amount} successfully.")
+        else:
+            print("Insufficient funds or invalid amount.")
+    
+    def view_transactions(self):
+        return self.bank.accounts[self.username]["transactions"]
+
+# Sample Interaction
+def main():
+    bank = Bank()
+    while True:
+        print("\nWelcome to the Banking System")
+        print("1. Create Account")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Choose an option: ")
+        
+        if choice == "1":
+            username = input("Enter a username: ")
+            password = input("Enter a password: ")
+            bank.create_account(username, password)
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = input("Enter password: ")
+            account = bank.authenticate(username, password)
+            if account:
+                while True:
+                    print("\n1. View Balance")
+                    print("2. Deposit Money")
+                    print("3. Withdraw Money")
+                    print("4. View Transactions")
+                    print("5. Logout")
+                    action = input("Choose an option: ")
+                    if action == "1":
+                        print("Balance:", account.get_balance())
+                    elif action == "2":
+                        amount = float(input("Enter deposit amount: "))
+                        account.deposit(amount)
+                    elif action == "3":
+                        amount = float(input("Enter withdrawal amount: "))
+                        account.withdraw(amount)
+                    elif action == "4":
+                        print("Transactions:", account.view_transactions())
+                    elif action == "5":
+                        break
+                    else:
+                        print("Invalid option.")
+        elif choice == "3":
+            break
+        else:
+            print("Invalid option, try again.")
+
+if __name__ == "__main__":
+    main()
